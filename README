@@ -7,3 +7,7 @@ Proje, tekrar yapılacak taramalara duyarlıdır. Yani çekilen kayıt mevcut
 ise ekleme yerine güncelleme yapar.
 
 Çekilen bilgiler MySql veritabanında saklanır.
+
+
+Linux üzerinde çalıştırma için şu komut:
+$java -jar beyazperde.jar
