@@ -1,0 +1,292 @@
+diff --git a/BeyazOrumcek.java b/BeyazOrumcek.java
+index 084f141..6255fa4 100644
+--- a/BeyazOrumcek.java
++++ b/BeyazOrumcek.java
+@@ -11,14 +11,18 @@ import java.util.regex.Pattern;
+ 
+ public class BeyazOrumcek {
+ 
+-    public static void main(String[] args) {
++    public ArrayList<String> yillarArasiFilmler() {
+         Scanner s = new Scanner(System.in);
+-        ArrayList<String> ali = new ArrayList<String>();
+ 
+         System.out.println("Yıl aralığı - Başlangıç (Dahil):");
+         int y1 = s.nextInt();
+         System.out.println("Yıl aralığı - Bitiş (Dahil):");
+         int y2 = s.nextInt();
++        return yillarArasiFilmler(y1, y2);
++    }
++
++    public ArrayList<String> yillarArasiFilmler(int y1, int y2) {
++        ArrayList<String> ali = new ArrayList<String>();
+         if (y1 > 1900 && y1 <= y2) {
+             Pattern p;
+             Matcher m;
+@@ -26,31 +30,33 @@ public class BeyazOrumcek {
+                 int onyil = (y / 10) * 10;
+                 int page = 1, sayfa = 0;
+                 do {
+-                    String url = "http://www.beyazperde.com/filmler/tum-filmleri/beyazperde/onyil-" + onyil + "/yila-" + y + "/?page=" + page + "";
+-                    //
+-                    // Kaynak online alınmalı..
+-                    String source = new BeyazOrumcek().tempGrab();
+-                    //
+-                    //
++                    String url = "http://www.beyazperde.com/filmler/tum-filmleri/kullanici-puani/onyil-" + onyil + "/yila-" + y + "/?page=" + page + "";
++                    String source = (new MashIt().mashIt(url));
++
++                    /*<li><span class="acLnk 1F4446484E4843C11FCBC34E1E4446484E4843C1461F47C348484A494642461EC0C34A49461F4F49C646481E2A2626201FC646484A1E2A2626261F2FC04A4C432E23">5</span></li></ul>*/
+                     /*Sayfaları listeler*/
+                     String tempa = "";
+-                    p = Pattern.compile("(/?page=[\\d+]\">)([\\d+])(</a></li></ul>)");
++                    p = Pattern.compile("(<li><span class=\".*?\">)(\\d+)(</span></li></ul>)");
+                     m = p.matcher(source);
+                     if (m.find()) {
+                         sayfa = Integer.parseInt(m.group(2));
+                     }
+ 
++                    /*<h2 class="tt_18 d_inline"><a Class="no_underline" href="/filmler/film-118605/">Herşey Çok Güzel Olacak</a></h2>*/
+                     /*Filmleri listeler*/
++                    System.out.println(y + " yılı , " + page + ". sayfa.");
+                     String temp = "";
+-                    p = Pattern.compile("(<h2 class=\"tt_18 d_inline\"><a class=\"no_underline\" href=\"http://www.beyazperde.com/filmler/film-)([\\w]*)(/\">)(.*?)(</a></h2>)");
++                    p = Pattern.compile("(<h2 class=\"tt_18 d_inline\"><a Class=\"no_underline\" href=\"/filmler/film-)([\\w]*)(/\">)(.*?)(</a></h2>)");
+                     m = p.matcher(source);
+                     while (m.find()) {
+                         String film = m.group(2);
+                         ali.add(film);
++                        FilmBilgileri fb = new FilmBilgileri();
++                        fb.tumunuCek(film);
++                        fb.kaydet();
+                         System.out.println(film);
+                     }
+ 
+-                    System.out.println(y + " yılı , " + page + ". sayfa.");
+                     page++;
+                 } while (page <= sayfa);
+ 
+@@ -58,6 +64,13 @@ public class BeyazOrumcek {
+         } else {
+             System.out.println("Geçersiz yıl aralığı..");
+         }
++        return ali;
++
++    }
++
++    public static void main(String[] args) {
++        BeyazOrumcek bo = new BeyazOrumcek();
++        bo.yillarArasiFilmler(1999, 2001);
+     }
+ 
+     public String tempGrab() {
+diff --git a/FilmBilgileri.java b/FilmBilgileri.java
+index a978ff4..5988486 100644
+--- a/FilmBilgileri.java
++++ b/FilmBilgileri.java
+@@ -2,6 +2,9 @@
+ /**
+  *
+  * @author Merter
++ * Yeni metod (veri çekme işlemi) eklendiğinde tumunuCek() metodu güncellenmelidir.
++ * tumunuCek() metodu dışındaki metodlar sadece değeri geri döndürür.tumunuCek() metodu değişkenleri günceller.
++ *
+  */
+ import java.util.ArrayList;
+ import java.util.regex.Matcher;
+@@ -10,17 +13,20 @@ import java.util.regex.Pattern;
+ public class FilmBilgileri {
+ 
+     MashIt mit = new MashIt();
++    Vt vt = new Vt();
+     String source;
+-    String url;
++    String filmId;
+     boolean grabbed = false;
++    String filmIsmi, vizyonTarihi, yonetmen, orjinalAdi, ulke, tur, yapimYili, ozet;
++    ArrayList<String> oyuncular;
+ 
+-    public void grabSource(String url) {
++    public void grabSource(String filmId) {
+         try {
+-            this.url = url;
+-            source = mit.mashIt(url);
++            this.filmId = filmId;
++            source = mit.mashIt("http://www.beyazperde.com/filmler/film-" + filmId + "/");
+             grabbed = true;
+         } catch (Exception e) {
+-            url = "";
++            filmId = "";
+             grabbed = false;
+         }
+     }
+@@ -50,10 +56,6 @@ public class FilmBilgileri {
+     }
+ 
+     public String yonetmen() {
+-//        String temp;
+-
+-        //<a rel="v:directedBy" title="Lana Wachowski" href="/sanatcilar/sanatci-28989/" class="underline" >Lana Wachowski</a>
+-
+         String temp = "";
+         Pattern p = Pattern.compile("(<a rel=\"v:directedBy\" title=\"[\\w\\s]*\" href=\"/sanatcilar/sanatci-[\\w]*/\" class=\"underline\" >)(.*?)(</a>)");
+         Matcher m = p.matcher(source);
+@@ -62,16 +64,6 @@ public class FilmBilgileri {
+         }
+ 
+         return temp;
+-        /*
+-        Pattern p = Pattern.compile("(Yönetmen: <span class=\"bold\"><a .*>)([\\w\\s]*)(</a></span>)");
+-        Matcher m = p.matcher(source);
+-        if (m.find()) {
+-        temp = m.group(2);
+-        } else {
+-        temp = "-bulunamadı-";
+-        }
+-        return temp;
+-         */
+     }
+ 
+     public String orjinalAdi() {
+@@ -102,8 +94,10 @@ public class FilmBilgileri {
+         String temp = "";
+         Pattern p = Pattern.compile("(<a class=\"underline\" href=\"/filmler/tum-filmleri/kullanici-puani/tur-[\\w]*/\">)(\\w*)(</a>)");
+         Matcher m = p.matcher(source);
++        boolean virgul = false;
+         while (m.find()) {
+-            temp += m.group(2) + ",";
++            temp += ((virgul) ? "," : "") + m.group(2);
++            virgul = true;
+         }
+ 
+         return temp;
+@@ -135,41 +129,108 @@ public class FilmBilgileri {
+ 
+     public ArrayList<String> oyuncular() {
+         ArrayList<String> ali = new ArrayList<String>();
+-        String kaynak = mit.mashIt(url + "/oyuncular/");
++        String kaynak = mit.mashIt("http://www.beyazperde.com/filmler/film-" + filmId + "/oyuncular/");
+ 
+         String temp = "";
+         Pattern p = Pattern.compile("(<div class=\"titlebar\"><h3><a href=\"/sanatcilar/sanatci-[\\w]*?/\">)([\\w\\s\\f ]*?)(</a></h3></div><p>Rol:)");
+         Matcher m = p.matcher(kaynak);
+         while (m.find()) {
+             String oyuncu = m.group(2);
+-            System.out.println("-" + oyuncu + "-");
++//            System.out.println("-" + oyuncu + "-");
+             ali.add(oyuncu);
+         }
+-//        System.out.println(temp);
+-
+-//        System.out.println(kaynak);
+         return ali;
+     }
+ 
+-    public ArrayList<String> yilAraligindakiFilmler(int y1, int y2) {
+-        ArrayList<String> ali = new ArrayList<String>();
+-        
+-        
+-        
+-        return ali;
++    public void tumunuCek() {
++        if (grabbed) {
++            filmIsmi = filmIsmi();
++            vizyonTarihi = vizyonTarihi();
++            yonetmen = yonetmen();
++            orjinalAdi = orjinalAdi();
++            ulke = ulke();
++            tur = tur();
++            yapimYili = yapimYili();
++            ozet = ozet();
++            oyuncular = oyuncular();
++        }
++    }
++
++    public void tumunuCek(String filmId) {
++        grabSource(filmId);
++        filmIsmi = filmIsmi();
++        vizyonTarihi = vizyonTarihi();
++        yonetmen = yonetmen();
++        orjinalAdi = orjinalAdi();
++        ulke = ulke();
++        tur = tur();
++        yapimYili = yapimYili();
++        ozet = ozet();
++        oyuncular = oyuncular();
++    }
++
++    public boolean kaydet() {
++        try {
++            if (grabbed) {
++                /*
++                | cinema_artists         |+
++                | cinema_cast            |?-
++                | cinema_directors       |+
++                | cinema_genres          |?-
++                | cinema_movieCast       |?-
++                | cinema_movieDirectors  |+
++                | cinema_movieScenarists |?-
++                | cinema_movieYears      |+
++                | cinema_movies          |+
++                | cinema_properties      |+
++                | cinema_scenarists      |?-
++                | cinema_years           |+
++                 */
++                int fid = vt.executeAndGetLastID("insert ignore into cinema_movies (title,href,status) values ('" + filmIsmi + "','" + filmId + "',1)");
++
++                /* Bilgiler ekleniyor.. */
++                int yonetmenId = vt.executeAndGetLastID("insert ignore into cinema_directors (name) values ('" + yonetmen + "')");
++                for (String oyuncu : oyuncular) {
++                    vt.execute("insert ignore into cinema_artists (name) values ('" + oyuncu + "')");
++                }
++                vt.execute("insert ignore into cinema_genres (name) values ('" + tur + "')");
++                vt.execute("insert ignore into cinema_years (year) values (" + yapimYili + ")");
++                vt.execute("insert ignore into cinema_properties (movieId,name,value) values (" + fid + ",'tur','" + tur + "')");
++                vt.execute("insert ignore into cinema_properties (movieId,name,value) values (" + fid + ",'yapimYili','" + yapimYili + "')");
++//                vt.execute("insert ignore into cinema_properties (movieId,name,value) values (" + fid + ",'ozet','" + ozet + "')");
++                vt.execute("insert ignore into cinema_properties (movieId,name,value) values (" + fid + ",'ulke','" + ulke + "')");
++                vt.execute("insert ignore into cinema_properties (movieId,name,value) values (" + fid + ",'orjinalAdi','" + orjinalAdi + "')");
++                vt.execute("insert ignore into cinema_properties (movieId,name,value) values (" + fid + ",'vizyontarihi','" + vizyonTarihi + "')");
++
++                /* Bağlantılar ekleniyor.. */
++                vt.execute("insert ignore into cinema_movieDirectors (movieId,directorId) values ("+fid+"," + yonetmenId + ")");
++                vt.execute("insert ignore into cinema_movieYears (movieId,year) values ("+fid+"," + yapimYili + ")");
++
++
++            } else {
++                System.out.println("Film bilgileri çekilmedi.");
++                return false;
++            }
++        } catch (Exception e) {
++            System.out.println("Veritabanına eklerken hata oluştu : " + e.getLocalizedMessage());
++        }
++        return false;
+     }
+ 
+     public static void main(String[] args) {
+         FilmBilgileri bg = new FilmBilgileri();
+-        bg.grabSource("http://www.beyazperde.com/filmler/film-19776/");
+-        System.out.println(bg.filmIsmi());
+-        System.out.println(bg.vizyonTarihi());
+-        System.out.println(bg.yonetmen());
+-        System.out.println(bg.orjinalAdi());
+-        System.out.println(bg.ulke());
+-        System.out.println(bg.tur());
+-        System.out.println(bg.yapimYili());
+-        System.out.println(bg.ozet());
+-        bg.oyuncular();
++        System.out.println("Deneme film bilgileri.");
++//        bg.grabSource("http://www.beyazperde.com/filmler/film-19776/");
++        bg.tumunuCek("19776");
++        bg.kaydet();
++//        System.out.println(bg.filmIsmi());
++//        System.out.println(bg.vizyonTarihi());
++//        System.out.println(bg.yonetmen());
++//        System.out.println(bg.orjinalAdi());
++//        System.out.println(bg.ulke());
++//        System.out.println(bg.tur());
++//        System.out.println(bg.yapimYili());
++//        System.out.println(bg.ozet());
++//        bg.oyuncular();
+     }
+ }
