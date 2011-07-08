@@ -6,4 +6,4 @@ için geliştirildi.
 Proje, tekrar yapılacak taramalara duyarlıdır. Yani çekilen kayıt mevcut
 ise ekleme yerine güncelleme yapar.
 
-Çekilen bilgiler MySql veritabanında saklanır.
+Çekilen bilgiler MySql veritabanında saklanır. ( Veritabanı ismi olarak "beyazperde" kullanıldı.)
