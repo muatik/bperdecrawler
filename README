@@ -6,8 +6,12 @@ için geliştirildi.
 Proje, tekrar yapılacak taramalara duyarlıdır. Yani çekilen kayıt mevcut
 ise ekleme yerine güncelleme yapar.
 
+<<<<<<< HEAD
 Çekilen bilgiler MySql veritabanında saklanır.
 
 
 Linux üzerinde çalıştırma için şu komut:
 $java -jar beyazperde.jar
+=======
+Çekilen bilgiler MySql veritabanında saklanır. ( Veritabanı ismi olarak "beyazperde" kullanıldı.)
+>>>>>>> merter/master
